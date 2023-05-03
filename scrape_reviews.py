@@ -24,23 +24,33 @@ with open(filename, 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     writer.writerow(header)
 
-# Scrape reviews
-while True:
-    # Get page
-    driver.get(url)
-    #get the button to click
+# Get first page
+driver.get(url)
+time.sleep(5)
 
-    time.sleep(5)
-    
+# Scrape reviews
+page_no = 1
+
+while True:    
     # Extract HTML content
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
     
     # Extract reviews
+    print('Scraping page', page_no)
     reviews = soup.find_all('article', {'class': 'paper_paper__1PY90 paper_outline__lwsUX card_card__lQWDv styles_reviewCard__hcAvl'})
     for review in reviews:
+
         # Extract review text
-        review_text = review.find('p', {'class': 'typography_body-l__KUYFJ typography_appearance-default__AAY17 typography_color-black__5LYEn'}).text.strip()
+        if review.find('p', {'class': 'typography_body-l__KUYFJ typography_appearance-default__AAY17 typography_color-black__5LYEn'}) is None:
+            review_text = ''
+        else:        
+            review_text = review.find('p', {'class': 'typography_body-l__KUYFJ typography_appearance-default__AAY17 typography_color-black__5LYEn'}).text.strip()
+
+        # Extract headline text
+        headline_text = review.find('h2', {'class': 'typography_heading-s__f7029 typography_appearance-default__AAY17'}).text.strip()
+        if headline_text != review_text[:len(headline_text)]:
+            review_text = headline_text + ' ' + review_text     
         review_text = review_text.replace(',', '')
         
         # Extract rating. Note: rating is in the form of stars, so we need to extract the alt text from the image tag following the div tag of class 'star-rating_starRating__4rrcf star-rating_medium__iN6Ty'
@@ -62,6 +72,7 @@ while True:
     # Check if there are more reviews
     load_more_button = driver.find_element(By.NAME, 'pagination-button-next')
     if load_more_button:
+        page_no += 1
         driver.execute_script("arguments[0].click();", load_more_button)
         time.sleep(5)
     else:
